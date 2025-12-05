@@ -177,12 +177,12 @@ services:
     user: root
     volumes:
       - type: bind
-        source: /media/devmon/sda1-usb-_USB_DISK_2.0_90/Odoo/data
+        source: /mnt/usb/Odoo/data
         target: /var/lib/odoo
         bind:
           create_host_path: true
       - type: bind
-        source: /media/devmon/sda1-usb-_USB_DISK_2.0_90/Odoo/config
+        source: /mnt/usb/Odoo/config
         target: /etc/odoo
         bind:
           create_host_path: true
@@ -210,7 +210,7 @@ services:
     user: root
     volumes:
       - type: bind
-        source: /media/devmon/sda1-usb-_USB_DISK_2.0_90/PostgreSQL/data
+        source: /mnt/usb/PostgreSQL/data
         target: /var/lib/postgresql/data
         bind:
           create_host_path: true
