@@ -162,7 +162,7 @@ services:
           memory: 4096M
     environment:
       - HOST=big-bear-odoo-db
-      - PASSWORD=a8d785b6-bc00-49cc-8675-d404093d1507
+      - PASSWORD=password_aqui
       - USER=odoo
     hostname: odoo
     image: odoo:19
@@ -200,7 +200,7 @@ services:
           memory: 2048M
     environment:
       - POSTGRES_DB=postgres
-      - POSTGRES_PASSWORD=a8d785b6-bc00-49cc-8675-d404093d1507
+      - POSTGRES_PASSWORD=password_aqui
       - POSTGRES_USER=odoo
     hostname: odoo-db
     image: postgres:15
