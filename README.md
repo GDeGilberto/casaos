@@ -1,7 +1,7 @@
 # CasaOS en Raspberry Pi — Guía de instalación desde cero
 (Con Docker y almacenamiento USB)
 
-Este README explica, paso a paso y en castellano, cómo preparar una Raspberry Pi para ejecutar CasaOS desde cero, cómo instalar y fijar una versión de Docker compatible, cómo montar una USB para el almacenamiento persistente y un ejemplo/plantilla para desplegar aplicaciones (ejemplo: Odoo). Está pensado para Raspberry Pi con Raspberry Pi OS (32/64-bit) o una distro Debian/Ubuntu compatible.
+Este README explica, paso a paso, cómo preparar una Raspberry Pi para ejecutar CasaOS desde cero, cómo instalar y fijar una versión de Docker compatible, cómo montar una USB para el almacenamiento persistente y un ejemplo/plantilla para desplegar aplicaciones (ejemplo: Odoo). Está pensado para Raspberry Pi con Raspberry Pi OS (32/64-bit) o una distro Debian/Ubuntu compatible.
 
 ## Índice
 - Requisitos
@@ -17,7 +17,7 @@ Este README explica, paso a paso y en castellano, cómo preparar una Raspberry P
 ---
 
 ## 1) Requisitos
-- Raspberry Pi 3/4/400/Zero 2 W (recomendada Pi 4 o superior para producción).
+- Raspberry Pi 3/4/400/Zero 2 W (probada en raspberrypi 4 8 RAM).
 - 4 GB+ RAM recomendado para Odoo / apps de producción.
 - Raspberry Pi OS (preferible Debian-based) o Ubuntu Server ARM.
 - Conexión a internet.
@@ -39,41 +39,50 @@ sudo apt install -y ca-certificates curl gnupg lsb-release software-properties-c
 
 ---
 
-## 3) Instalar y fijar la versión de Docker (recomendación y procedimiento)
-CasaOS funciona con Docker. Algunas versiones de Docker recientes pueden provocar incompatibilidades, por eso se recomienda una versión estable y probada (por ejemplo Docker 20.10.x). Si prefieres usar la versión más reciente, pruébala primero en un entorno de test.
+## 3) Instalar CasaOS
+La instalación oficial:
+```bash
+curl -fsSL https://get.casaos.io | sudo bash
+```
+
+Opcional recomendado:
+- Por default se instala en el puerto 80, se recomienda cambiar a puerto 90 desde el sitio web de CasaOS para dejar libre el puerto 80.
+
+Si quieres que el almacenamiento de CasaOS apunte a la USB, crea los volúmenes o directorios en la USB y, si es necesario, ajusta las rutas de datos en la configuración de CasaOS o crea symlinks (ver sección montaje USB).
+
+---
+
+## Error al instalar CasaOS al querer instalar dependencias de Docker
+## 3.1) Instalar y fijar la versión de Docker (opcional si arroja el error anterior)
+CasaOS funciona con Docker. Algunas versiones de Docker recientes pueden provocar incompatibilidades, por eso se recomienda una versión estable y probada (por ejemplo Docker 20.10.x). Si prefieres usar la versión más reciente.
 
 ### A) Añadir repositorio oficial de Docker
 ```bash
-sudo mkdir -p /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
-  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+# Add Docker's official GPG key:
+sudo apt update
+sudo apt install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Add the repository to Apt sources:
+sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/debian
+Suites: $(. /etc/os-release && echo "$VERSION_CODENAME")
+Components: stable
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+
 sudo apt update
 ```
-
-### B) Buscar versiones disponibles y elegir una
+### B). Install the Docker packages.
 ```bash
-apt-cache madison docker-ce
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 ```
-Selecciona una versión 20.10.x que aparezca en la lista (el formato puede variar según la distro).
+te preguntara si quieres continuar de dices que y
 
-### C) Instalar la versión elegida (usar la versión exacta mostrada por apt-cache)
-```bash
-VERSION="<la-version-que-elegiste>"
-sudo apt install -y docker-ce=$VERSION docker-ce-cli=$VERSION containerd.io
-```
-Ejemplo (ajusta la variable `VERSION` según la salida de `apt-cache`):
-```bash
-sudo apt install -y docker-ce=5:20.10.17~3-0~debian-buster docker-ce-cli=5:20.10.17~3-0~debian-buster containerd.io
-```
-
-### D) Fijar la versión para evitar actualizaciones automáticas
-```bash
-sudo apt-mark hold docker-ce docker-ce-cli containerd.io
-```
-
-### E) Verificar instalación
+### C) Verificar instalación
 ```bash
 sudo systemctl enable --now docker
 docker --version
@@ -82,22 +91,19 @@ sudo docker run --rm hello-world
 
 > Nota: Si no aparece la versión que quieres en los repositorios, consulta la documentación oficial de Docker para obtener el paquete `.deb` correcto o usa el script de instalación con precaución. Para Raspberry Pi OS / Debian armhf/arm64, usa las builds oficiales para tu arquitectura.
 
----
-
-## 4) Instalar CasaOS
-La instalación oficial (comprueba siempre el script antes de ejecutarlo):
-```bash
-curl -fsSL https://get.casaos.io | sudo bash
-```
-
-Opcional recomendado:
-- Cambiar el puerto de CasaOS a 90 si quieres dejar el puerto 80 libre para otros servicios.
-
-Si quieres que el almacenamiento de CasaOS apunte a la USB, crea los volúmenes o directorios en la USB y, si es necesario, ajusta las rutas de datos en la configuración de CasaOS o crea symlinks (ver sección montaje USB).
+#### Volver a intentar el paso 3 de instalar CasaOS
 
 ---
 
-## 5) Preparar y montar la USB para almacenamiento persistente
+Para este paso se entiende que se pudo instalar CasaOS y nos mostrara en la terminal la ruta para acceder al sitio web de CasaOS.
+Introduces tu credenciales para acceder y al entrar mostrara la interface.
+
+Nota: Puede que al acceder arroje una notificacion de un fallo indicando `failded to load apps, please reflesh later` se debera realizar las siguientes instrucciones:
+
+
+---
+
+## 4) Preparar y montar la USB para almacenamiento persistente
 Se recomienda formatear la USB a `ext4` para mayor estabilidad en Linux. Si necesitas compatibilidad con Windows, usa `exFAT` y ten en cuenta permisos.
 
 ### A) Identificar la unidad
@@ -144,7 +150,7 @@ sudo chmod -R 755 /mnt/usb
 
 ---
 
-## 6) Docker Compose de las aplicaciones instaladas con CasaOS y su configuración para respaldar información en USB
+## 4) Docker Compose de las aplicaciones instaladas con CasaOS y su configuración para respaldar información en USB
 
 A continuación se muestra una plantilla (adaptada) para Odoo + PostgreSQL usada en CasaOS. Asegúrate de ajustar rutas, contraseñas y permisos según tu entorno.
 
